@@ -19,3 +19,5 @@ final class AuthLogin extends AuthEvent {
 }
 
 //sealed used for the type safety and  prevents runtime errors that could occur if a new state or event was added but not handled in the UI or BLoC logic.
+
+final class AuthIsUserLoggedIn extends AuthEvent {}
