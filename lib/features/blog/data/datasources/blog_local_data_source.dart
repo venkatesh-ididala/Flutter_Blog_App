@@ -12,21 +12,21 @@ class BlogLocalDataSourceImpl implements BlogLocalDataSource {
 
   @override
   List<BlogModel> loadBlogs() {
-    List<BlogModel> blogs = [];
+    if (box.isEmpty) return [];
 
-    for (int i = 0; i < box.length; i++) {
-      blogs.add(BlogModel.fromJson(box.get(i.toString())));
-    }
+    print("Offline Hive data: ${box.get('blogs_list')}");
+    // ✅ Read the stored list
+    final data = box.get('blogs_list', defaultValue: []) as List;
 
-    return blogs;
+    return data
+        .map((e) => BlogModel.fromJson(Map<String, dynamic>.from(e)))
+        .toList();
   }
 
   @override
   void uploadLocalBlogs({required List<BlogModel> blogs}) {
-    box.clear();
-
-    for (int i = 0; i < blogs.length; i++) {
-      box.put(i.toString(), blogs[i].toJson());
-    }
+    final data = blogs.map((b) => b.toJson()).toList();
+    // ✅ store entire list under one key
+    box.put('blogs_list', data);
   }
 }

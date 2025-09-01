@@ -1,45 +1,57 @@
-part of 'init_dependencies.dart'; //its like export
+part of 'init_dependencies.dart';
 
 final serviceLocator = GetIt.instance;
 
 Future<void> initDependencies() async {
   _initAuth();
   _initBlog();
+
+  // Supabase initialization
   final supabase = await Supabase.initialize(
-      url: AppSecrets.supabaseUrl, anonKey: AppSecrets.supabaseAnonKey);
-
-  //hive intialisation
-  // inside initDependencies
-  final dir = await getApplicationDocumentsDirectory();
-  await Hive.initFlutter(dir.path);
-
-  serviceLocator.registerLazySingleton(() => supabase.client);
-
-  serviceLocator.registerLazySingleton(
-    () => Hive.box('blogs'),
+    url: AppSecrets.supabaseUrl,
+    anonKey: AppSecrets.supabaseAnonKey,
   );
-  serviceLocator.registerFactory(() => InternetConnection());
-  //core
+  serviceLocator.registerLazySingleton(() => supabase.client);
+// Hive initialization
+  if (kIsWeb) {
+    // Web: Hive uses IndexedDB, no path required
+    await Hive.initFlutter();
+  } else {
+    // Mobile/Desktop: provide directory path
+    final dir = await getApplicationDocumentsDirectory();
+    await Hive.initFlutter(dir.path);
+  }
+
+// ✅ Open the blogs box before registering
+  final blogsBox = await Hive.openBox('blogs');
+  serviceLocator.registerLazySingleton(() => blogsBox);
+
+  // Other core dependencies
   serviceLocator.registerLazySingleton(() => AppUserCubit());
 
-  serviceLocator.registerFactory(() => ConnectionCheckerImpl(serviceLocator()));
+  // Internet connection (external package)
+  serviceLocator.registerLazySingleton(() => InternetConnection());
+
+  // ✅ Register ConnectionChecker abstraction and implementation
+  serviceLocator.registerLazySingleton<ConnectionChecker>(
+    () => ConnectionCheckerImpl(serviceLocator()),
+  );
 }
 
-//new instance of the object created everytime
+// ----------------- Auth -----------------
 void _initAuth() {
-  //Data source
   serviceLocator
+    // Data source
     ..registerFactory<AuthRemoteDataSource>(
         () => AuthRemoteDataSourceImp(serviceLocator()))
-    //Repository
+    // Repository
     ..registerFactory<AuthRepository>(
         () => AuthRepositoryImpl(serviceLocator(), serviceLocator()))
-
-    //usecases
+    // Use cases
     ..registerFactory(() => UserSignUp(serviceLocator()))
     ..registerFactory(() => UserLogin(serviceLocator()))
     ..registerFactory(() => CurrentUser(serviceLocator()))
-    //bloc
+    // Bloc
     ..registerLazySingleton(() => AuthBloc(
           userSignUp: serviceLocator(),
           userLogin: serviceLocator(),
@@ -48,30 +60,26 @@ void _initAuth() {
         ));
 }
 
+// ----------------- Blog -----------------
 void _initBlog() {
-  //data source
   serviceLocator
+    // Data source
     ..registerFactory<BlogRemoteDataSource>(
         () => BlogRemoteDataSourceImpl(serviceLocator()))
     ..registerFactory<BlogLocalDataSource>(
         () => BlogLocalDataSourceImpl(serviceLocator()))
-    // repository
+    // Repository
     ..registerFactory<BlogRepository>(() => BlogRepositoryImpl(
           serviceLocator(),
           serviceLocator(),
           serviceLocator(),
         ))
-    // usecase
+    // Use cases
     ..registerFactory(() => UploadBlog(serviceLocator()))
     ..registerFactory(() => GetAllBlogs(serviceLocator()))
-    //bloc
+    // Bloc
     ..registerLazySingleton(() => BlogBloc(
           uploadBlog: serviceLocator(),
           getAllBlogs: serviceLocator(),
         ));
 }
-
-
-
-
-//register dependencies and use 

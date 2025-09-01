@@ -21,14 +21,35 @@ class BlogRemoteDataSourceImpl implements BlogRemoteDataSource {
 
   BlogRemoteDataSourceImpl(this.supabaseClient);
 
+  // @override
+  // Future<BlogModel> uploadBlog(BlogModel blog) async {
+  //   try {
+  //     final blogData = await supabaseClient
+  //         .from('blogs')
+  //         .insert(blog.toJson())
+  //         .select()
+  //         .single(); // returns the single inserted row
+
+  //     return BlogModel.fromJson(blogData);
+  //   } on PostgrestException catch (e) {
+  //     throw ServerException(e.message);
+  //   } catch (e) {
+  //     throw ServerException(e.toString());
+  //   }
+  // }
+
   @override
   Future<BlogModel> uploadBlog(BlogModel blog) async {
     try {
-      final blogData = await supabaseClient.from('blogs').insert(blog.toJson());
+      final blogData = await supabaseClient
+          .from('blogs')
+          .insert(blog.toRemoteJson()) // ✅ only DB fields
+          .select()
+          .single();
 
-      return BlogModel.fromJson(blogData.first);
+      return BlogModel.fromJson(blogData);
     } on PostgrestException catch (e) {
-      throw ServerException(e.message); //when an error occur in database
+      throw ServerException(e.message);
     } catch (e) {
       throw ServerException(e.toString());
     }
@@ -55,10 +76,11 @@ class BlogRemoteDataSourceImpl implements BlogRemoteDataSource {
       final blogs = await supabaseClient.from('blogs').select(
           '*,profiles (name)'); //join of profiles and blogs table with the posterid
 
-      return blogs
-          .map((blog) => BlogModel.fromJson(blog)
-              .copyWith(posterName: blog['profiles']['name']))
-          .toList();
+      return blogs.map<BlogModel>((blog) {
+        final model = BlogModel.fromJson(blog);
+        final name = blog['profiles']?['name'] ?? '';
+        return model.copyWith(posterName: name);
+      }).toList();
     } on PostgrestException catch (e) {
       throw ServerException(e.message); //when an error occur in database
     } catch (e) {
