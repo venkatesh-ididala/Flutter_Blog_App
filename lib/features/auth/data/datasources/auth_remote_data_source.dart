@@ -38,6 +38,8 @@ class AuthRemoteDataSourceImp implements AuthRemoteDataSource {
       }
 
       return UserModel.fromJson(response.user!.toJson());
+    } on AuthException catch (e) {
+      throw ServerException(e.message); //auth exceptions like password small
     } catch (e) {
       throw ServerException(e.toString());
     }
@@ -57,6 +59,8 @@ class AuthRemoteDataSourceImp implements AuthRemoteDataSource {
       }
 
       return UserModel.fromJson(response.user!.toJson());
+    } on AuthException catch (e) {
+      throw ServerException(e.message); //auth exceptions like password small
     } catch (e) {
       throw ServerException(e.toString());
     }

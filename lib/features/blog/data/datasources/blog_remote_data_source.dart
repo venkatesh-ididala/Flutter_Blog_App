@@ -27,6 +27,8 @@ class BlogRemoteDataSourceImpl implements BlogRemoteDataSource {
       final blogData = await supabaseClient.from('blogs').insert(blog.toJson());
 
       return BlogModel.fromJson(blogData.first);
+    } on PostgrestException catch (e) {
+      throw ServerException(e.message); //when an error occur in database
     } catch (e) {
       throw ServerException(e.toString());
     }
@@ -40,6 +42,8 @@ class BlogRemoteDataSourceImpl implements BlogRemoteDataSource {
           image); //file is image and path is the location of storage image
 
       return supabaseClient.storage.from('blog_images').getPublicUrl(blog.id);
+    } on StorageException catch (e) {
+      throw ServerException(e.message); //when an error occur in database
     } catch (e) {
       throw ServerException(e.toString());
     }
@@ -55,6 +59,8 @@ class BlogRemoteDataSourceImpl implements BlogRemoteDataSource {
           .map((blog) => BlogModel.fromJson(blog)
               .copyWith(posterName: blog['profiles']['name']))
           .toList();
+    } on PostgrestException catch (e) {
+      throw ServerException(e.message); //when an error occur in database
     } catch (e) {
       throw ServerException(e.toString());
     }
